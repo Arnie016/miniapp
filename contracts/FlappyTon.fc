@@ -1,0 +1,97 @@
+#include "stdlib.fc";
+
+;; Storage variables
+;; high_scores: map<address, int> - stores player scores
+;; entry_fee: int - cost to play the game
+;; prize_pool: int - accumulated prize pool
+
+(slice, int, int) load_data() inline {
+    var ds = get_data().begin_parse();
+    return (
+        ds~load_dict(), ;; high_scores
+        ds~load_coins(), ;; entry_fee
+        ds~load_coins()  ;; prize_pool
+    );
+}
+
+() save_data(slice high_scores, int entry_fee, int prize_pool) impure inline {
+    set_data(begin_cell()
+        .store_dict(high_scores)
+        .store_coins(entry_fee)
+        .store_coins(prize_pool)
+        .end_cell());
+}
+
+;; Initialize contract
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) { ;; ignore empty messages
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) { ;; ignore bounced messages
+        return ();
+    }
+    slice sender_address = cs~load_msg_addr();
+
+    (slice high_scores, int entry_fee, int prize_pool) = load_data();
+    
+    int op = in_msg_body~load_uint(32);
+    
+    if (op == 1) { ;; submit score
+        int score = in_msg_body~load_uint(32);
+        int current_score = high_scores.udict_get_or_default?(267, sender_address, 0);
+        if (score > current_score) {
+            high_scores~udict_set(267, sender_address, score);
+        }
+        save_data(high_scores, entry_fee, prize_pool);
+        return ();
+    }
+    
+    if (op == 2) { ;; start game
+        throw_unless(450, msg_value >= entry_fee);
+        prize_pool += entry_fee;
+        save_data(high_scores, entry_fee, prize_pool);
+        return ();
+    }
+    
+    if (op == 3) { ;; claim prize
+        int player_score = high_scores.udict_get_or_default?(267, sender_address, 0);
+        throw_unless(451, player_score > 0);
+        
+        ;; Calculate prize based on score
+        int prize = prize_pool / 10; ;; 10% of prize pool
+        prize_pool -= prize;
+        
+        ;; Send prize to player
+        var msg = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(sender_address)
+            .store_coins(prize)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .end_cell();
+        send_raw_message(msg, 1);
+        
+        save_data(high_scores, entry_fee, prize_pool);
+        return ();
+    }
+    
+    throw(0xffff); ;; unknown operation
+}
+
+;; Get methods
+(int) get_player_score(slice address) method_id {
+    (slice high_scores, _, _) = load_data();
+    return high_scores.udict_get_or_default?(267, address, 0);
+}
+
+(int) get_entry_fee() method_id {
+    (_, int entry_fee, _) = load_data();
+    return entry_fee;
+}
+
+(int) get_prize_pool() method_id {
+    (_, _, int prize_pool) = load_data();
+    return prize_pool;
+}
