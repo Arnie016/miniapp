@@ -1,0 +1,13 @@
+{
+  "name": "telegram-mini-app",
+  "version": "1.0.0",
+  "description": "Basic Telegram Mini App Example",
+  "main": "app.js",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "@twa-dev/sdk": "^6.9.0",
+    "serve": "^14.2.1"
+  }
+}
