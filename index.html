@@ -3,520 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy TON</title>
+    <title>Split Expenses</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- TON Connect -->
-    <script src="https://unpkg.com/@tonconnect/sdk@latest/dist/tonconnect-sdk.min.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        :root {
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        }
+
+        * {
             margin: 0;
-            padding: 16px;
-            color: var(--tg-theme-text-color);
-            background-color: var(--tg-theme-bg-color);
-            touch-action: none;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            padding: calc(8px + var(--safe-area-inset-top)) 8px calc(8px + var(--safe-area-inset-bottom));
+            min-height: 100vh;
         }
 
         .container {
             max-width: 600px;
             margin: 0 auto;
-            text-align: center;
-        }
-
-        .section {
-            background-color: var(--tg-theme-section-bg-color);
-            border-radius: 12px;
             padding: 16px;
-            margin-bottom: 16px;
         }
 
-        .section-header {
-            color: var(--tg-theme-section-header-text-color);
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .game-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            margin: 0 auto;
-            aspect-ratio: 9/16;
-        }
-
-        canvas {
-            width: 100%;
-            height: 100%;
-            border-radius: 8px;
-            background-color: var(--tg-theme-secondary-bg-color);
-        }
-
-        .score-display {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
+        .header {
+            margin-bottom: 24px;
             text-align: center;
+        }
+
+        .header h1 {
             font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .balance {
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .balance-amount {
+            font-size: 32px;
             font-weight: bold;
-            color: var(--tg-theme-accent-text-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin: 8px 0;
+        }
+
+        .balance-amount.positive {
+            color: #4CAF50;
+        }
+
+        .balance-amount.negative {
+            color: #f44336;
         }
 
         .button {
-            background-color: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
+            background: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #fff);
             border: none;
-            border-radius: 8px;
             padding: 12px 20px;
-            font-size: 14px;
+            border-radius: 8px;
+            font-size: 16px;
             font-weight: 500;
-            cursor: pointer;
             width: 100%;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+
+        .button:active {
+            opacity: 0.8;
+        }
+
+        .expenses {
+            margin-top: 24px;
+        }
+
+        .expense-item {
+            background: var(--tg-theme-bg-color, #fff);
+            border: 1px solid var(--tg-theme-hint-color, #ddd);
+            border-radius: 8px;
+            padding: 12px;
             margin-bottom: 8px;
-            transition: opacity 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .button:hover {
-            opacity: 0.9;
+        .expense-details {
+            flex: 1;
         }
 
-        .subtitle {
-            color: var(--tg-theme-subtitle-text-color);
+        .expense-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .expense-meta {
             font-size: 14px;
+            color: var(--tg-theme-hint-color, #888);
+        }
+
+        .expense-amount {
+            font-weight: 600;
+            margin-left: 16px;
+        }
+
+        .expense-amount.paid {
+            color: #4CAF50;
+        }
+
+        .expense-amount.owed {
+            color: #f44336;
+        }
+
+        .add-expense-form {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-bg-color, #fff);
+            padding: 16px;
+            border-top: 1px solid var(--tg-theme-hint-color, #ddd);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
             margin-bottom: 16px;
         }
 
-        .wallet-info {
-            color: var(--tg-theme-accent-text-color);
-            font-weight: 500;
+        .form-group label {
+            display: block;
             margin-bottom: 8px;
+            color: var(--tg-theme-hint-color, #888);
         }
 
-        .high-scores {
-            text-align: left;
-            margin-top: 12px;
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--tg-theme-hint-color, #ddd);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
         }
 
-        .high-score-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--tg-theme-hint-color);
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--tg-theme-hint-color, #888);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="section">
-            <div class="section-header">Flappy TON</div>
-            <p class="subtitle">Tap to fly, collect TON coins!</p>
-            <div class="game-container">
-                <canvas id="gameCanvas"></canvas>
-                <div class="score-display">Score: <span id="score">0</span></div>
-            </div>
+        <div class="header">
+            <h1>Split Expenses</h1>
+            <div>with friends from Telegram</div>
         </div>
 
-        <div class="section">
-            <div class="section-header">Wallet</div>
-            <div id="walletInfo" class="wallet-info">Connect wallet to save scores</div>
-            <button class="button" id="connectWallet">Connect TON Wallet</button>
+        <div class="balance">
+            <div>Your Balance</div>
+            <div class="balance-amount positive">$0.00</div>
         </div>
 
-        <div class="section">
-            <div class="section-header">High Scores</div>
-            <div id="highScores" class="high-scores">
-                <!-- High scores will be populated here -->
+        <button class="button" onclick="showAddExpense()">Add New Expense</button>
+
+        <div class="expenses">
+            <div class="empty-state">
+                No expenses yet.<br>
+                Add your first expense to get started!
             </div>
         </div>
     </div>
 
-    <script>
-        // Game contract address
-        const CONTRACT_ADDRESS = 'YOUR_DEPLOYED_CONTRACT_ADDRESS';
-        const ENTRY_FEE = 0.1; // 0.1 TON to play
+    <div class="add-expense-form" id="addExpenseForm">
+        <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="expenseDescription" placeholder="e.g., Dinner at Restaurant">
+        </div>
 
+        <div class="form-group">
+            <label>Amount</label>
+            <input type="number" id="expenseAmount" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="form-group">
+            <label>Split with</label>
+            <input type="text" id="expenseSplitWith" placeholder="Select friends" readonly onclick="selectFriends()">
+        </div>
+
+        <button class="button" onclick="addExpense()">Save Expense</button>
+        <button class="button" onclick="hideAddExpense()" style="background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color);">Cancel</button>
+    </div>
+
+    <script>
         // Initialize Telegram WebApp
-        let tg = window.Telegram.WebApp;
+        const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Initialize TON Connect
-        const connector = new TonConnect({
-            manifestUrl: 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/tonconnect-manifest.json'
-        });
+        // App state
+        let expenses = [];
+        let selectedFriends = [];
 
-        // Game state
-        let gameStarted = false;
-        let canPlay = false;
-
-        // Game variables
-        let canvas = document.getElementById('gameCanvas');
-        let ctx = canvas.getContext('2d');
-        let score = 0;
-        let isPlaying = false;
-        let bird = {
-            x: 50,
-            y: canvas.height / 2,
-            velocity: 0,
-            gravity: 0.5,
-            jump: -8,
-            size: 20
-        };
-        let pipes = [];
-        let coins = [];
-
-        // Set canvas size
-        function resizeCanvas() {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        // Game initialization
-        function initGame() {
-            score = 0;
-            document.getElementById('score').textContent = score;
-            bird.y = canvas.height / 2;
-            bird.velocity = 0;
-            pipes = [];
-            coins = [];
-            isPlaying = true;
-            gameLoop();
+        // Show add expense form
+        function showAddExpense() {
+            document.getElementById('addExpenseForm').style.display = 'block';
+            tg.HapticFeedback.impactOccurred('light');
         }
 
-        // Game loop
-        function gameLoop() {
-            if (!isPlaying) return;
-
-            // Update bird position
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
-
-            // Check collisions
-            if (bird.y < 0 || bird.y > canvas.height) {
-                gameOver();
-                return;
-            }
-
-            // Update and check pipe collisions
-            for (let i = pipes.length - 1; i >= 0; i--) {
-                pipes[i].x -= 2;
-                if (checkCollision(bird, pipes[i])) {
-                    gameOver();
-                    return;
-                }
-                if (pipes[i].x + pipes[i].width < 0) {
-                    pipes.splice(i, 1);
-                    score++;
-                    document.getElementById('score').textContent = score;
-                }
-            }
-
-            // Update and check coin collisions
-            for (let i = coins.length - 1; i >= 0; i--) {
-                coins[i].x -= 2;
-                if (checkCoinCollision(bird, coins[i])) {
-                    coins.splice(i, 1);
-                    score += 5;
-                    document.getElementById('score').textContent = score;
-                }
-            }
-
-            // Add new pipes
-            if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 200) {
-                addPipe();
-            }
-
-            // Add new coins
-            if (Math.random() < 0.02) {
-                addCoin();
-            }
-
-            // Draw everything
-            draw();
-
-            requestAnimationFrame(gameLoop);
+        // Hide add expense form
+        function hideAddExpense() {
+            document.getElementById('addExpenseForm').style.display = 'none';
+            tg.HapticFeedback.impactOccurred('light');
+            
+            // Clear form
+            document.getElementById('expenseDescription').value = '';
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseSplitWith').value = '';
+            selectedFriends = [];
         }
 
-        // Draw game elements
-        function draw() {
-            // Clear canvas
-            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--tg-theme-secondary-bg-color');
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw bird
-            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--tg-theme-button-color');
-            ctx.beginPath();
-            ctx.arc(bird.x, bird.y, bird.size, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw pipes
-            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--tg-theme-destructive-text-color');
-            pipes.forEach(pipe => {
-                ctx.fillRect(pipe.x, pipe.y, pipe.width, pipe.height);
-            });
-
-            // Draw coins
-            ctx.fillStyle = '#FFD700';
-            coins.forEach(coin => {
-                ctx.beginPath();
-                ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        // Handle user input
-        canvas.addEventListener('click', () => {
-            if (!isPlaying && canPlay) {
-                initGame();
-            } else if (isPlaying) {
-                bird.velocity = bird.jump;
-            } else if (!canPlay) {
-                startGame();
-            }
-        });
-
-        // Collision detection
-        function checkCollision(bird, pipe) {
-            return bird.x + bird.size > pipe.x &&
-                   bird.x - bird.size < pipe.x + pipe.width &&
-                   bird.y + bird.size > pipe.y &&
-                   bird.y - bird.size < pipe.y + pipe.height;
-        }
-
-        function checkCoinCollision(bird, coin) {
-            const dx = bird.x - coin.x;
-            const dy = bird.y - coin.y;
-            return Math.sqrt(dx * dx + dy * dy) < bird.size + coin.size;
-        }
-
-        // Add new pipe
-        function addPipe() {
-            const gap = 150;
-            const minHeight = 50;
-            const maxHeight = canvas.height - gap - minHeight;
-            const height = Math.random() * (maxHeight - minHeight) + minHeight;
-
-            pipes.push({
-                x: canvas.width,
-                y: 0,
-                width: 50,
-                height: height
-            });
-
-            pipes.push({
-                x: canvas.width,
-                y: height + gap,
-                width: 50,
-                height: canvas.height - height - gap
-            });
-        }
-
-        // Add new coin
-        function addCoin() {
-            coins.push({
-                x: canvas.width,
-                y: Math.random() * (canvas.height - 40) + 20,
-                size: 10
-            });
-        }
-
-        // Start game with entry fee
-        async function startGame() {
-            if (!connector.connected) {
-                tg.showPopup({
-                    title: 'Connect Wallet',
-                    message: 'Please connect your TON wallet to play!',
-                    buttons: [{type: 'ok'}]
-                });
-                return;
-            }
-
-            try {
-                // Prepare transaction
-                const transaction = {
-                    validUntil: Math.floor(Date.now() / 1000) + 60, // 60 seconds from now
-                    messages: [
-                        {
-                            address: CONTRACT_ADDRESS,
-                            amount: ENTRY_FEE.toString(),
-                            payload: {
-                                abi: 'FlappyTon',
-                                method: 'startGame',
-                                params: {}
-                            }
-                        }
-                    ]
-                };
-
-                // Send transaction
-                const result = await connector.sendTransaction(transaction);
-                if (result.success) {
-                    canPlay = true;
-                    initGame();
-                }
-            } catch (e) {
-                tg.showAlert('Failed to start game: ' + e.message);
-            }
-        }
-
-        // Save score to blockchain
-        async function saveScore(score) {
-            if (!connector.connected) return;
-
-            try {
-                const transaction = {
-                    validUntil: Math.floor(Date.now() / 1000) + 60,
-                    messages: [
-                        {
-                            address: CONTRACT_ADDRESS,
-                            amount: '0.01',
-                            payload: {
-                                abi: 'FlappyTon',
-                                method: 'submitScore',
-                                params: {
-                                    score: score
-                                }
-                            }
-                        }
-                    ]
-                };
-
-                await connector.sendTransaction(transaction);
-                loadHighScores();
-            } catch (e) {
-                console.error('Failed to save score:', e);
-            }
-        }
-
-        // Claim prize
-        async function claimPrize() {
-            if (!connector.connected) return;
-
-            try {
-                const transaction = {
-                    validUntil: Math.floor(Date.now() / 1000) + 60,
-                    messages: [
-                        {
-                            address: CONTRACT_ADDRESS,
-                            amount: '0.01',
-                            payload: {
-                                abi: 'FlappyTon',
-                                method: 'claimPrize',
-                                params: {}
-                            }
-                        }
-                    ]
-                };
-
-                const result = await connector.sendTransaction(transaction);
-                if (result.success) {
-                    tg.showPopup({
-                        title: 'Success!',
-                        message: 'Prize claimed successfully!',
-                        buttons: [{type: 'ok'}]
-                    });
-                }
-            } catch (e) {
-                tg.showAlert('Failed to claim prize: ' + e.message);
-            }
-        }
-
-        // Load high scores
-        async function loadHighScores() {
-            if (!connector.connected) return;
-
-            try {
-                const provider = new TonClient({
-                    endpoint: 'https://toncenter.com/api/v2/jsonRPC'
-                });
-
-                const contract = new Contract(provider, {
-                    address: CONTRACT_ADDRESS,
-                    abi: FlappyTonABI
-                });
-
-                const scores = await contract.getHighScores();
-                const highScoresDiv = document.getElementById('highScores');
-                highScoresDiv.innerHTML = '';
-
-                scores.forEach((score, index) => {
-                    const scoreItem = document.createElement('div');
-                    scoreItem.className = 'high-score-item';
-                    scoreItem.innerHTML = `
-                        <span>#${index + 1} ${score.address.slice(0, 6)}...${score.address.slice(-4)}</span>
-                        <span>${score.score}</span>
-                    `;
-                    highScoresDiv.appendChild(scoreItem);
-                });
-            } catch (e) {
-                console.error('Failed to load high scores:', e);
-            }
-        }
-
-        // Update wallet info
-        async function updateWalletInfo() {
-            if (connector.connected) {
-                const walletInfo = document.getElementById('walletInfo');
-                walletInfo.textContent = `Connected: ${connector.account.address.slice(0, 6)}...${connector.account.address.slice(-4)}`;
-                document.getElementById('connectWallet').style.display = 'none';
-                
-                // Add claim prize button
-                const claimButton = document.createElement('button');
-                claimButton.className = 'button';
-                claimButton.textContent = 'Claim Prize';
-                claimButton.onclick = claimPrize;
-                walletInfo.parentNode.insertBefore(claimButton, walletInfo.nextSibling);
-                
-                loadHighScores();
-            }
-        }
-
-        // Game over
-        function gameOver() {
-            isPlaying = false;
-            if (connector.connected) {
-                saveScore(score);
-            }
-
+        // Select friends from Telegram
+        function selectFriends() {
+            tg.HapticFeedback.impactOccurred('light');
+            
+            // Use native Telegram user picker
             tg.showPopup({
-                title: 'Game Over!',
-                message: `Score: ${score}\nPlay again for ${ENTRY_FEE} TON?`,
+                title: 'Select Friends',
+                message: 'Choose friends to split the expense with',
                 buttons: [
-                    {
-                        type: 'ok',
-                        text: 'Play Again'
-                    },
-                    {
-                        type: 'cancel',
-                        text: 'Cancel'
-                    }
+                    {type: 'default', text: 'Select', id: 'select'},
+                    {type: 'cancel', text: 'Cancel'}
                 ]
-            }).then((clicked) => {
-                if (clicked === 'ok') {
-                    startGame();
+            }, function(buttonId) {
+                if (buttonId === 'select') {
+                    // This would integrate with Telegram's user selection
+                    // For now, we'll just show a message
+                    document.getElementById('expenseSplitWith').value = 'John, Alice';
                 }
             });
         }
 
-        // Wallet connection
-        document.getElementById('connectWallet').addEventListener('click', async () => {
-            try {
-                await connector.connect();
-                updateWalletInfo();
-                loadHighScores();
-            } catch (e) {
-                tg.showAlert('Failed to connect wallet: ' + e.message);
-            }
-        });
+        // Add new expense
+        function addExpense() {
+            const description = document.getElementById('expenseDescription').value;
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
 
-        // Initialize
-        connector.onStatusChange(updateWalletInfo);
+            if (!description || !amount) {
+                tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Please fill in all fields');
+                return;
+            }
+
+            // Add expense to list
+            const expense = {
+                id: Date.now(),
+                description,
+                amount,
+                date: new Date(),
+                splitWith: selectedFriends
+            };
+
+            expenses.push(expense);
+            updateExpensesList();
+            hideAddExpense();
+
+            // Success feedback
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        // Update expenses list
+        function updateExpensesList() {
+            const expensesContainer = document.querySelector('.expenses');
+            
+            if (expenses.length === 0) {
+                expensesContainer.innerHTML = `
+                    <div class="empty-state">
+                        No expenses yet.<br>
+                        Add your first expense to get started!
+                    </div>
+                `;
+                return;
+            }
+
+            expensesContainer.innerHTML = expenses.map(expense => `
+                <div class="expense-item">
+                    <div class="expense-details">
+                        <div class="expense-title">${expense.description}</div>
+                        <div class="expense-meta">
+                            ${new Date(expense.date).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div class="expense-amount owed">
+                        $${expense.amount.toFixed(2)}
+                    </div>
+                </div>
+            `).join('');
+
+            // Update balance
+            const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const balanceEl = document.querySelector('.balance-amount');
+            balanceEl.textContent = `$${total.toFixed(2)}`;
+            balanceEl.className = `balance-amount ${total >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        // Initialize app
+        window.addEventListener('load', () => {
+            // Set theme
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#fff');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000');
+            document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#888');
+            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
+            document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#fff');
+            
+            // Initialize UI
+            updateExpensesList();
+        });
     </script>
 </body>
 </html>
