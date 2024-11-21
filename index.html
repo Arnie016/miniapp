@@ -3,18 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App</title>
+    <title>Interactive Mini App</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to Telegram Mini App</h1>
-        <div id="mainButton"></div>
-        <div id="content">
-            <!-- Content will be dynamically loaded here -->
+        <div class="header">
+            <h1>Interactive Mini App</h1>
+            <div class="user-info"></div>
         </div>
+        
+        <div class="card-container">
+            <div class="action-card" id="card1">
+                <h3>Action 1</h3>
+                <p>Click to trigger an alert</p>
+                <button class="action-button">Try It</button>
+            </div>
+            
+            <div class="action-card" id="card2">
+                <h3>Action 2</h3>
+                <p>Show user data</p>
+                <button class="action-button">Show Data</button>
+            </div>
+            
+            <div class="action-card" id="card3">
+                <h3>Action 3</h3>
+                <p>Change theme</p>
+                <button class="action-button">Toggle</button>
+            </div>
+        </div>
+
+        <div id="mainButtonContainer"></div>
     </div>
     <script src="app.js"></script>
 </body>

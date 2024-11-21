@@ -10,23 +10,36 @@ console.log('Telegram WebApp initialized:', tg.initDataUnsafe);
 // Expand the Web App to full height
 tg.expand();
 
+// Set header color to match Telegram theme
+document.querySelector('.header').style.backgroundColor = tg.backgroundColor;
+
+// Update user info
+const userInfo = document.querySelector('.user-info');
+if (tg.initDataUnsafe?.user) {
+    const user = tg.initDataUnsafe.user;
+    userInfo.innerHTML = `Welcome, ${user.first_name}! `;
+} else {
+    userInfo.innerHTML = 'Welcome to our Mini App! ';
+}
+
 // Configure main button
 tg.MainButton.setParams({
-    text: 'Click Me!',
-    color: '#2481cc',
-    text_color: '#ffffff',
+    text: 'Close App',
+    color: tg.themeParams.button_color,
+    text_color: tg.themeParams.button_text_color,
     is_active: true,
     is_visible: true
 });
 
-// Event handler for the main button
+// Handle main button click
 tg.MainButton.onClick(() => {
-    tg.showAlert('Hello from Mini App!');
+    tg.close();
 });
 
 // Handle theme changes
 const setThemeClass = () => {
     document.documentElement.className = tg.colorScheme;
+    document.querySelector('.header').style.backgroundColor = tg.backgroundColor;
 };
 
 // Initial theme setup
@@ -35,17 +48,33 @@ setThemeClass();
 // Listen for theme changes
 tg.onEvent('themeChanged', setThemeClass);
 
-// Update content with user info if available
-const contentDiv = document.getElementById('content');
-if (tg.initDataUnsafe?.user) {
-    const user = tg.initDataUnsafe.user;
-    contentDiv.innerHTML = `
-        <p>Welcome, ${user.first_name}!</p>
-        <p>This is a Telegram Mini App.</p>
-    `;
-} else {
-    contentDiv.innerHTML = `
-        <p>Welcome to our Mini App!</p>
-        <p>Try clicking the button below.</p>
-    `;
-}
+// Action button handlers
+document.querySelectorAll('.action-button').forEach((button, index) => {
+    button.addEventListener('click', () => {
+        switch(index) {
+            case 0:
+                // Action 1: Show alert
+                tg.showAlert('Hello from Mini App! ');
+                break;
+            case 1:
+                // Action 2: Show user data
+                if (tg.initDataUnsafe?.user) {
+                    const user = tg.initDataUnsafe.user;
+                    tg.showPopup({
+                        title: 'User Info',
+                        message: `ID: ${user.id}\nFirst Name: ${user.first_name}\nUsername: ${user.username || 'Not set'}`,
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    tg.showAlert('No user data available');
+                }
+                break;
+            case 2:
+                // Action 3: Toggle theme
+                const newTheme = tg.colorScheme === 'dark' ? 'light' : 'dark';
+                document.documentElement.className = newTheme;
+                tg.setHeaderColor(newTheme === 'dark' ? '#000000' : '#ffffff');
+                break;
+        }
+    });
+});
